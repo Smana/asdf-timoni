@@ -2,6 +2,26 @@
 
 set -euo pipefail
 
+get_platform() {
+  uname | tr '[:upper:]' '[:lower:]'
+}
+
+get_arch() {
+  local arch; arch=$(uname -m | tr '[:upper:]' '[:lower:]')
+  case ${arch} in
+  arm64) # m1 macs
+    arch='arm64';;
+  aarch64) # all other arm64 devices
+    arch='arm64';;
+  x86_64)
+    arch='amd64';;
+  *) # fallback
+    arch='amd64';;
+  esac
+
+  echo "${arch}"
+}
+
 current_script_path=${BASH_SOURCE[0]}
 plugin_dir=$(dirname "$(dirname "$current_script_path")")
 
@@ -9,15 +29,16 @@ plugin_dir=$(dirname "$(dirname "$current_script_path")")
 source "${plugin_dir}/lib/utils.bash"
 
 mkdir -p "$ASDF_DOWNLOAD_PATH"
-
-release_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION.tar.gz"
-checksum_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION-checksums.txt"
+arch="$(get_arch)"
+platform="$(get_platform)"
+release_file="${TOOL_NAME}_${ASDF_INSTALL_VERSION}_${platform}_${arch}.tar.gz"
+checksum_file="${TOOL_NAME}_${ASDF_INSTALL_VERSION}_checksums.txt"
 download_release "$ASDF_INSTALL_VERSION" "$release_file"
 download_checksum "$ASDF_INSTALL_VERSION" "$checksum_file"
 verify_checksum "$checksum_file"
 
 #  Extract contents of tar.gz file into the download directory
-tar -xzf "$release_file" -C "$ASDF_DOWNLOAD_PATH" --strip-components=1 || fail "Could not extract $release_file"
+tar -xzf "$ASDF_DOWNLOAD_PATH/$release_file" -C "$ASDF_DOWNLOAD_PATH" || fail "Could not extract $release_file"
 
 # Remove the tar.gz file since we don't need to keep it
-rm "$release_file"
+rm "$ASDF_DOWNLOAD_PATH/$release_file"
