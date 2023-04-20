@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for timoni.
 GH_REPO="https://github.com/stefanprodan/timoni"
 TOOL_NAME="timoni"
 TOOL_TEST="timoni --help"
@@ -13,6 +12,26 @@ fail() {
 }
 
 curl_opts=(-fsSL)
+
+get_platform() {
+  uname | tr '[:upper:]' '[:lower:]'
+}
+
+get_arch() {
+  local arch; arch=$(uname -m | tr '[:upper:]' '[:lower:]')
+  case ${arch} in
+  arm64) # m1 macs
+    arch='arm64';;
+  aarch64) # all other arm64 devices
+    arch='arm64';;
+  x86_64)
+    arch='amd64';;
+  *) # fallback
+    arch='amd64';;
+  esac
+
+  echo "${arch}"
+}
 
 # NOTE: You might want to remove this if timoni is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
@@ -31,22 +50,38 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if timoni has other means of determining installable versions.
 	list_github_tags
 }
 
 download_release() {
-	local version filename url
+	local version filename platform arch url
+	platform="$(get_platform)"
+	arch="$(get_arch)"
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for timoni
-	url="$GH_REPO/archive/v${version}.tar.gz"
-
+	url="$GH_REPO/releases/download/v${version}/${TOOL_NAME}_${version}_${platform}_${arch}.tar.gz"
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
 }
+
+download_checksum() {
+  local version="$1"
+  local filename="$2"
+  local url="$GH_REPO/releases/download/v${version}/${TOOL_NAME}_${version}_checksums.txt"
+
+  echo "* Downloading $TOOL_NAME release $version checksums..."
+  curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+}
+
+verify_checksum() {
+  local checksums_filename="$1"
+  (
+    cd "$(dirname "$checksums_filename")"
+    shasum -a 256 --check --ignore-missing --strict "$checksums_filename"
+  )
+}
+
 
 install_version() {
 	local install_type="$1"
