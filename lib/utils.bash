@@ -33,7 +33,6 @@ list_all_versions() {
 	list_github_tags
 }
 
-
 download_release() {
 	local version filename url
 	version="$1"
@@ -45,20 +44,20 @@ download_release() {
 }
 
 download_checksum() {
-  local version="$1"
-  local filename="$2"
-  local url="$GH_REPO/releases/download/v${version}/${TOOL_NAME}_${version}_checksums.txt"
+	local version="$1"
+	local filename="$2"
+	local url="$GH_REPO/releases/download/v${version}/${TOOL_NAME}_${version}_checksums.txt"
 
-  echo "* Downloading $TOOL_NAME release $version checksums..."
-  curl "${curl_opts[@]}" -o "$ASDF_DOWNLOAD_PATH/$filename" -C - "$url" || fail "Could not download $url"
+	echo "* Downloading $TOOL_NAME release $version checksums..."
+	curl "${curl_opts[@]}" -o "$ASDF_DOWNLOAD_PATH/$filename" -C - "$url" || fail "Could not download $url"
 }
 
 verify_checksum() {
-  local checksums_filename="$1"
-  (
-    cd "$(dirname "$ASDF_DOWNLOAD_PATH/$checksums_filename")"
-    shasum -a 256 --check --ignore-missing --strict "$checksums_filename"
-  )
+	local checksums_filename="$1"
+	(
+		cd "$(dirname "$ASDF_DOWNLOAD_PATH/$checksums_filename")"
+		shasum -a 256 --check --ignore-missing --strict "$checksums_filename"
+	)
 }
 
 install_version() {
